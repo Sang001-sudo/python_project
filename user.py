@@ -1,5 +1,6 @@
-import bcrypt # type: ignore
+import bcrypt
 from db import db
+import sqlite3
 
 cursor = db()
 
@@ -13,10 +14,36 @@ class user:
         
         
     def register(self, full_name: str, username: str, password: str, initial_deposit: float):
-        pass
+        hash_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        try:
+            cursor.execute("""
+                INSERT INTO users (full_name, username, password, initial_deposit) VALUES (?, ?, ?, ?)
+            """, (full_name, username, hash_password, initial_deposit))
+        except sqlite3.IntegrityError as e:
+            e = str(e)
+            if "full_name" in e:
+                print(f"Name already exists: {e}")
+            elif "username" in e:
+                print(f"Username already exists: {e}")
+        else:
+            print("Sign up successful 🥳")
+    
     
     def login(self, username: str, password: str):
-        pass
+        user_data = cursor.execute("SELECT fullname, balance, account_number, username, password FROM users WHERE username = ?", (username,)).fetchone()
+        if user_data:
+            full_name, balance, account_number, username, hash_passwd = user_data
+            stored_password = hash_passwd
+            if bcrypt.checkpw(password.encode('utf-8'), stored_password):
+                self.full_name = full_name
+                self.balance = balance 
+                self.account_number = account_number 
+                self.username = username 
+                print(f"Login successful! Welcome back {self.full_name}!")
+            else:
+                print("Incorrect username or password")
+        else:
+            print("Incorrect username or password")
     
     def deposit(self, username: str, amount: float):
         pass
